@@ -1,4 +1,4 @@
-# Genomique_Exploration
+# Analyse intégrative de données multi-omiques et cliniques
 
 
 ### Analyse des instabilités génomiques et prédiction de la survie en oncologie
