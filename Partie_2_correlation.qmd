@@ -1,0 +1,111 @@
+---
+title: "Partie 2 - Corrélations"
+author: "Jules"
+format: html
+bibliography: Genomique.bib
+---
+
+### L’objectif de cette deuxième partie est d’explorer les déterminants génomiques et cliniques du TMB (Tumor Mutational Burden), la charge mutationnelle des tumeurs.
+
+#### On s'inspire ici des enjeux traitées par : @smith_mutation_2023 @di_mauro_high_2024. Les données sont issues de cet article : @jee_automated_2024.
+
+- Dans un premier modèle simple, seule la fraction du génome altéré est considérée : bien que la relation soit significative, elle explique très peu de la variance du TMB (R² ≈ 0,0015), cette variable seule n’est pas suffisante pour comprendre la variabilité observée. 
+
+- En revanche, le modèle multiple incluant des variables cliniques (type de cancer, sexe, âge, tabagisme, score MSI) améliore fortement le pouvoir explicatif (R² ajusté ≈ 0,34). 
+
+- Les résultats montrent que le MSI score est de loin le facteur le plus associé au TMB, suivi du type de cancer. La sélection par AIC confirme que l’âge n’apporte pas d’information supplémentaire. Soulignons tout de même la tendance visible sur le graphique. 
+
+- En conclusion, le TMB apparaît comme un phénomène multifactoriel, fortement lié aux instabilités microsatellites et au contexte tumoral, et non pas réductible à une seule mesure génomique globale. 
+
+
+```{r}
+#| echo: false
+
+library(ggplot2)
+library(MASS)
+
+df <- read.csv("msk_chord_2024_clinical_data.tsv.gz", sep="\t")
+```
+
+
+### 1. Modèle linéaire simple
+
+```{r}
+lm1 <- lm(TMB..nonsynonymous. ~ Fraction.Genome.Altered, data = df)
+summary(lm1)
+```
+
+
+### 2. Modèle multiple
+
+```{r}
+#| echo: false
+
+# Retirer les lignes avec des valeurs manquantes - très discutable mais ce n'est pas le sujet de l'étude
+df_lm2 <- na.omit(df[, c("TMB..nonsynonymous.", "Mutation.Count", "Fraction.Genome.Altered", "Cancer.Type", "Race", "Sex", "Current.Age", "Smoking.History..NLP.", "MSI.Score")])
+```
+
+```{r}
+lm2 <- lm(TMB..nonsynonymous. ~ Fraction.Genome.Altered + Cancer.Type + Sex + Current.Age + Smoking.History..NLP. + MSI.Score, data = df_lm2)
+summary(lm2)
+```
+
+
+### 3. Sélection des variables les plus significatives
+
+```{r}
+# Sélection de variables par AIC
+step_aic <- stepAIC(lm2, direction = "both", trace = FALSE)
+summary(step_aic)
+```
+
+
+## Graphiques pour détecter des tendances
+
+
+### TMB en fonction de MSI
+
+```{r}
+#| warning: false
+
+ggplot(df, aes(x = MSI.Score, y = TMB..nonsynonymous.)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = TRUE, color = "blue") +
+  labs(
+    x = "Score MSI",
+    y = "TMB"
+  ) +
+  theme_minimal()
+```
+
+
+### TMB en fonction de Cancer Type
+
+```{r}
+#| warning: false
+
+ggplot(df, aes(x = Cancer.Type, y = TMB..nonsynonymous.)) +
+  geom_boxplot() +
+  labs(
+    x = "Type de cancer",
+    y = "TMB"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+### TMB en fonction de l'âge
+
+```{r}
+#| warning: false
+
+ggplot(df, aes(x = Current.Age, y = TMB..nonsynonymous.)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = TRUE, color = "red") +
+  labs(
+    x = "Âge",
+    y = "TMB"
+  ) +
+  theme_minimal()
+```

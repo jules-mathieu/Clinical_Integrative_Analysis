@@ -1,0 +1,123 @@
+---
+title: "Partie 1 : Exploration des données"
+author: "Jules"
+format: html
+bibliography: Genomique.bib
+---
+
+### Dans cette première partie, nous explorons les données issues de cet article : @jee_automated_2024. Nous nous appuyerons dessus tout au long de notre étude. 
+
+#### Il s'agit de données issues d'un séquençage ciblé de 25 040 tumeurs provenant de 24 950 patients et de leurs échantillons normaux appariés via la plateforme MSK-IMPACT.
+
+
+- On s'intéresse tout d'abord aux proportions et distributions des variables cancer type, age et sex. Celles-ci semblent équilibrées.
+
+- Le graphique "Fraction Genome Altered vs Mutation count" permet d'étudier deux dimensions de l'instabilité génomique : mutationnelle vs chromosomique. @smith_mutation_2023
+
+- Le Kaplan-Meier plot (KM plot) visualise la survie globale des patients. Il permet d'évaluer l'impact de caractéristiques moléculaires ou cliniques sur la survie. @tang_srplot_2023 
+
+- Dans notre cohorte (poumon, colorectal, sein, prostate et pancréas), la relation entre mutation count et fraction of genome altered suit une forme inverse : certains échantillons ont un très fort nombre de mutations mais peu d’altérations chromosomiques, et d’autres l’inverse. Cette opposition suggère deux modes majeurs d’instabilité. La majorité des tumeurs restent toutefois en bas à gauche, correspondant à des profils plus stables. Du côté de la survie, le Kaplan–Meier montre qu’au bout de 60 mois (~5 ans), 45 % des patients sont encore en vie. 
+
+#### On s'inspire ici des graphiques présents sur cBioPortal : @noauthor_cbioportal_nodate
+
+```{r}
+#| echo: false
+#| warning: false
+
+library(tidyverse)
+library(ggplot2)
+library(survival)
+library(survminer)
+
+df <- read.csv("msk_chord_2024_clinical_data.tsv.gz", sep="\t", header=TRUE, stringsAsFactors=FALSE)
+```
+
+## Pie Plot - Cancer Type et Sex
+
+```{r}
+pie_plot <- function(var, titre) {
+  counts <- table(df[[var]])
+  labels <- names(counts)
+  pie(counts, labels = labels, main = titre)
+}
+```
+
+```{r}
+pie_plot("Cancer.Type", "Proportion: Cancer Type")
+
+pie_plot("Sex", "Proportion: Sex")
+```
+
+
+## Histogramme de la répartition des âges
+
+```{r}
+#| warning: false
+
+ggplot(df, aes(x = Current.Age)) +
+  geom_histogram(binwidth = 5, color = "white", alpha = 0.8) +
+  theme_minimal() +
+  labs(
+    x = "Âge",
+    y = "Nombre de patients"
+  )
+```
+
+
+## Fraction Genome Altered vs Mutation count
+
+```{r}
+#| warning: false
+
+ggplot(df, aes(x = Fraction.Genome.Altered, y = Mutation.Count)) +
+  geom_point(alpha = 0.6) +
+  theme_bw() +
+  labs(
+    x = "Nombre de mutations",
+    y = "Fraction du génome altéré"
+)
+```
+
+```{r}
+#| echo: false
+
+# Calcul des coefficients de corrélation
+pearson_cor <- cor(df$Mutation.Count, df$Fraction.Genome.Altered, method = "pearson", use = "complete.obs")
+spearman_cor <- cor(df$Mutation.Count, df$Fraction.Genome.Altered, method = "spearman", use = "complete.obs")
+
+cat("Pearson :", pearson_cor, "\n")
+cat("Spearman :", spearman_cor, "\n")
+```
+
+
+## KM plot : Overall (months)
+
+```{r}
+#| echo: false
+
+# Nettoyage des colonnes
+df$OS_months <- as.numeric(as.character(df$Overall.Survival..Months.))
+df$OS_status <- ifelse(grepl("1:DECEASED", df$Overall.Survival.Status), 1, 0)
+
+surv_obj <- Surv(time = df$OS_months, event = df$OS_status)
+
+# Kaplan–Meier global
+fit <- survfit(surv_obj ~ 1, data = df)
+```
+
+
+```{r}
+#| warning: false
+ggsurvplot(
+  fit,
+  data = df,
+  conf.int = FALSE,
+  risk.table = FALSE,
+  xlab = "Time (months)",
+  ylab = "Overall Survival (%)",
+  ggtheme = theme_bw(),
+  surv.scale = "percent",
+  legend = "none"
+)
+```
+
