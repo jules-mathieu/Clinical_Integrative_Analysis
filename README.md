@@ -1,7 +1,7 @@
 # Analyse intégrative de données multi-omiques et cliniques
 
 
-### Analyse des instabilités génomiques et prédiction de la survie en oncologie
+### Instabilités génomiques et prédiction de la survie en oncologie
 
 Ce projet explore un jeu de données génomiques et cliniques issu d'une cohorte de 25 000 patients atteints de cancer. DOI : https://doi.org/10.1038/s41586-024-08167-5 
 
